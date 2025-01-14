@@ -1,8 +1,18 @@
 const express = require('express')
+const morgan = require('morgan')
 const app = express()
 
 app.use(express.json())
 
+app.use(morgan('tiny'))
+
+//Morgan 
+morgan.token('body', (req) => JSON.stringify(req.body)) 
+app.use(morgan(':method :url :status :response-time ms - :body'))
+
+// Try not to show sensitive data in a real context 
+
+//ENDPOINTS
 app.get('/', (request, response) => {
     console.log(request.body)
     response.send('<h1><i>Hello Mark</i></h1>')
@@ -104,8 +114,26 @@ app.delete('/api/people/:id', (request, response) => {
     response.status(204).end()
 })
 
+//Using middleware 
+// const requestLogger = (request, response, next) => {
+//     console.log('Method:', request.method)
+//     console.log('Path:  ', request.path)
+//     console.log('Body:  ', request.body)
+//     console.log('---')
+//     next()
+// }
+// app.use(requestLogger)
+
+const unknownEndPoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+
+app.use(unknownEndPoint)
+
 
 const PORT = 3002
 app.listen(PORT, () => {
     console.log(`Server is running on PORT: ${PORT}`)
 })
+
+
