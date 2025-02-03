@@ -4,6 +4,8 @@ const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
 const api = supertest(app)
+const User = require('../models/user')
+const jwt = require('jsonwebtoken')
 
 const helper = require('./test_helper')
 
@@ -67,8 +69,8 @@ describe('when there is initially some notes saved', () => {
     })
   })
 
-  describe('addition of a new note', () => {
-    test('succeeds with valid data', async () => {
+  describe('addition of a new note requires authorization', () => {
+    test('access denied due to the lack of identification', async () => {
       const newNote = {
         content: 'async/await simplifies making async calls',
         important: true,
@@ -77,17 +79,17 @@ describe('when there is initially some notes saved', () => {
       await api
         .post('/api/notes')
         .send(newNote)
-        .expect(201)
+        .expect(401)
         .expect('Content-Type', /application\/json/)
 
       const notesAtEnd = await helper.notesInDb()
-      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length + 1)
+      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length)
 
       const contents = notesAtEnd.map(n => n.content)
-      assert(contents.includes('async/await simplifies making async calls'))
+      assert(!contents.includes('async/await simplifies making async calls'))
     })
 
-    test('fails with status code 400 if data invalid', async () => {
+    test('fails with status code 401 if needs authorization', async () => {
       const newNote = {
         important: true
       }
@@ -95,12 +97,31 @@ describe('when there is initially some notes saved', () => {
       await api
         .post('/api/notes')
         .send(newNote)
-        .expect(400)
+        .expect(401)
 
       const notesAtEnd = await helper.notesInDb()
 
       assert.strictEqual(notesAtEnd.length, helper.initialNotes.length)
     })
+
+    test('Addding a note successfully with authorization', async () => {
+
+      const token = await helper.getValidToken()
+
+      const newNote = {
+        content: 'a note that can be added'
+      }
+
+      await api
+        .post('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send(newNote)
+        .expect(201)
+
+      const notesAtEnd = await helper.notesInDb()
+      assert.strictEqual(notesAtEnd.length, helper.initialNotes.length +1)
+    })
+
   })
 
   describe('deletion of a note', () => {

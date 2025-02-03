@@ -1,4 +1,6 @@
 const Note = require('../models/note')
+const User = require('../models/user')
+const jwt = require('jsonwebtoken')
 
 const initialNotes = [
   {
@@ -24,6 +26,26 @@ const notesInDb = async () => {
   return notes.map(note => note.toJSON())
 }
 
+const usersInDb = async () => {
+  const users = await User.find({})
+  return users.map(u => u.toJSON())
+}
+
+const getValidToken = async () => {
+  const users = await usersInDb()
+  const userForToken = {
+    username: users[0].username,
+    id: users[0].id
+  }
+  const token = jwt.sign(userForToken, process.env.SECRET, { expiresIn: '1h' });
+  
+  return token
+}
+
 module.exports = {
-  initialNotes, nonExistingId, notesInDb
+  initialNotes,
+  nonExistingId,
+  notesInDb,
+  usersInDb,
+  getValidToken
 }

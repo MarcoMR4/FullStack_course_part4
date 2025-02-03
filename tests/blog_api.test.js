@@ -6,6 +6,8 @@ const helper = require('./blog_test_helper')
 const app = require('../app')
 const assert = require('assert')
 const api = supertest(app)
+const helper2 = require('./test_helper')
+
 
 describe('Basic operations with blogs', () => {
     beforeEach(async () => {
@@ -41,16 +43,20 @@ describe('Basic operations with blogs', () => {
     })
     
     // 4.10
-    test('a valid blog can be added ', async () => {
+    test('A valid blog can be added ', async () => {
+
+        const token = await helper2.getValidToken()
+
         const newBlog = {
             title: 'A new blog for our test',
-            author : "Mark MR", 
+            author: 'example',
             url: "http://www.exampleBlog.com", 
             likes: 1,
         }
     
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${token}`)
             .send(newBlog)
             .expect(201)
             .expect('Content-Type', /application\/json/)
@@ -64,6 +70,9 @@ describe('Basic operations with blogs', () => {
     
     // 4.11 
     test('A blog without likes will default to 0', async () => {
+
+        const token = await helper2.getValidToken()
+
         const newBlog = {
             title: 'A new blog for our test without likes',
             author : "Mark MR", 
@@ -72,6 +81,7 @@ describe('Basic operations with blogs', () => {
     
         await api
             .post('/api/blogs')
+            .set('Authorization', `Bearer ${token}`)
             .send(newBlog)
             .expect(201)
             .expect('Content-Type', /application\/json/)
@@ -82,6 +92,26 @@ describe('Basic operations with blogs', () => {
     
     // 4.12 
     test('A blog without a title cannot de added', async () => {
+
+        const token = await helper2.getValidToken()
+
+        const newBlog ={
+            author: "Juan Perez", 
+            url: "www.example.com"
+        }
+    
+        await api
+            .post('/api/blogs')
+            .set('Authorization', `Bearer ${token}`)
+            .send(newBlog)
+            .expect(400)
+    
+        const blogsAtEnd = await helper.blogsInDb()
+        assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length)
+    })
+
+    test('A blog cannot be added without authorization. ', async () => {
+
         const newBlog ={
             author: "Juan Perez", 
             url: "www.example.com"
@@ -90,7 +120,7 @@ describe('Basic operations with blogs', () => {
         await api
             .post('/api/blogs')
             .send(newBlog)
-            .expect(400)
+            .expect(401)
     
         const blogsAtEnd = await helper.blogsInDb()
         assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length)
@@ -98,28 +128,19 @@ describe('Basic operations with blogs', () => {
     
     describe('delete and update blogs', () => {
         // 4.13 
+
+        const token = helper2.getValidToken()
+
         test('A blog with an specific id can be deleted', async () => {
-            const newBlog = {
-                title: 'A blog to be deleted', 
-                author: 'Mark MR', 
-                url: 'http://www.example.com', 
-                likes: 1
-            }
-    
-            await api
-                .post('/api/blogs')
-                .send(newBlog)
-                .expect(201)
-                .expect('Content-Type', /application\/json/)
-    
             const originalBlogs = await helper.blogsInDb()
-            const blogToDelete = originalBlogs[originalBlogs.length - 1]
+            const blogToDelete = originalBlogs[originalBlogs.length - 1].id
     
-            await api
-                .delete(`/api/blogs/${blogToDelete.id}`)
+            await api 
+                .delete(`/api/blogs/${blogToDelete}`)
                 .expect(204)
-    
+            
             const blogsAtTheEnd = await helper.blogsInDb()
+    
             assert.strictEqual(blogsAtTheEnd.length, originalBlogs.length - 1)
         })
     

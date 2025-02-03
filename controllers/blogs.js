@@ -1,8 +1,11 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
+const User = require('../models/user')
+const jwt = require('jsonwebtoken')
+const { tokenExtractor } = require('../utils/middleware')
 
 blogsRouter.get('/', async (request, response) => {
-  const notes = await Blog.find({})
+  const notes = await Blog.find({}).populate('user', {username: 1, name: 1})
   response.json(notes)
 })
 
@@ -16,17 +19,29 @@ blogsRouter.get('/:id', async (request, response, next) => {
   }
 })
 
+
+// ********************4.17 step 5: impement authorization required for creating new blogs and add user id to the blog 
 blogsRouter.post('/', async (request, response, next) => {
   const body = request.body
 
+  const decodedToken = jwt.verify(tokenExtractor(request), process.env.SECRET)
+  if (!decodedToken.id) {
+    return response.status(401).json({ error: 'token invalid' })
+  }
+  const user = await User.findById(decodedToken.id)
+
   const blog = new Blog({
     title: body.title, 
-    author: body.author, 
+    author: user.name, 
     url: body.url, 
-    likes: body.likes
+    likes: body.likes,
+    user: user.id,
   })
 
   const savedBlog = await blog.save()
+  user.blogs = user.blogs.concat(savedBlog._id)
+  await user.save()
+
   response.status(201).json(savedBlog)
 })
 
