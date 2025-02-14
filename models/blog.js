@@ -3,12 +3,16 @@ const mongoose = require('mongoose')
 const blogSchema = new mongoose.Schema({
     title: {
       type: String,
-      required: true
+      required: true, 
+      minlength: 3
     }, 
     author: {
       type: String
     }, 
-    url: String, 
+    url: {
+      type: String, 
+      match: /^(?:www\.)?[a-zA-Z0-9-]+(\.[a-zA-Z]{2,6})+$/,
+    }, 
     likes: {
       type: Number,
       default: 0
